@@ -1,0 +1,33 @@
+# This repo is public. Everything below stays local-only because it references
+# sibling repositories' internal architecture, business context, and/or absolute
+# local file paths that must not be published. README.md is the only doc kept
+# tracked — it holds only what's necessary to build the extension's code.
+.wiki/
+floatvalue-extension-documentation/
+AGENTS.md
+CLAUDE.md
+
+# Local assistant config — references absolute paths to sibling repos on disk.
+.claude/
+.cursor/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Node (once the extension is scaffolded)
+node_modules/
+dist/
+build/
+*.log
+.tmp/
+
+# Captured browser traffic can contain Steam session/account data.
+har-files/
+
+# Env / secrets, if any ever apply here
+.env
+.env.*
+!.env.example
