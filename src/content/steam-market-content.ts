@@ -5,6 +5,7 @@ import type { Quality, QualityCurveState } from "../domain/types";
 import type { ExtensionRequest, ExtensionResponse } from "../shared/messages";
 import { GraphPanel } from "../ui/graph-panel";
 import { RouteChangeObserver } from "./route-change-observer";
+import { findSteamPriceHistorySection } from "./steam-inline-mount";
 
 let generation = 0;
 let panel: GraphPanel | null = null;
@@ -16,7 +17,8 @@ async function send(request: ExtensionRequest): Promise<ExtensionResponse> {
 }
 
 function ensurePanel(): GraphPanel {
-  panel ??= new GraphPanel();
+  panel ??= new GraphPanel(findSteamPriceHistorySection());
+  panel.mountBefore(findSteamPriceHistorySection());
   return panel;
 }
 
@@ -109,8 +111,14 @@ async function loadCurrentPage(): Promise<void> {
 
   if (thisGeneration !== generation || !currentStates) return;
   selectedQuality = selectedQuality ?? firstAvailableQuality(currentStates);
-  if (!selectedQuality) graphPanel.showMessage("No Cslytics float curves are available for this item.");
-  else renderStates(false);
+  if (!selectedQuality) {
+    const requestFailed = Object.values(currentStates).some((state) => state.errorWears.length > 0);
+    graphPanel.showMessage(
+      requestFailed
+        ? "Cslytics curve data could not be loaded. Try reloading the page."
+        : "No Cslytics float curves are available for this item."
+    );
+  } else renderStates(false);
 }
 
 const routeObserver = new RouteChangeObserver(() => {

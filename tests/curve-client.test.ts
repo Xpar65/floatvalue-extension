@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { CurveCache, type StorageAdapter } from "../src/background/curve-cache";
 import { SteamCurveClient } from "../src/background/curve-client";
 import { nameHash } from "../src/domain/name-hash";
@@ -28,7 +28,30 @@ const responseBody = {
   }
 };
 
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 describe("SteamCurveClient", () => {
+  it("binds the default fetch correctly in an extension service worker", async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify(responseBody), {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new SteamCurveClient(
+      new CurveCache(new MemoryStorage()),
+      undefined,
+      undefined,
+      () => Date.parse("2026-08-05T03:00:00Z")
+    );
+
+    await expect(client.fetchOne(NAME)).resolves.toMatchObject({ status: "success" });
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
   it("deduplicates concurrent names and then serves the successful cache", async () => {
     const storage = new MemoryStorage();
     const fetchMock = vi.fn(async () =>

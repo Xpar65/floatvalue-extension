@@ -34,7 +34,7 @@ export class SteamCurveClient {
 
   constructor(
     private readonly cache = new CurveCache(),
-    private readonly fetchImpl: typeof fetch = fetch,
+    private readonly fetchImpl: typeof fetch = globalThis.fetch.bind(globalThis),
     private readonly limiter = new ConcurrencyLimiter(8),
     private readonly now: () => number = Date.now
   ) {}

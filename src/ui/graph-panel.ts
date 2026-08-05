@@ -29,20 +29,19 @@ interface GraphSegment {
 }
 
 const STYLES = `
-  :host { all: initial; }
+  :host { all:initial; display:block; width:100%; margin:24px 0 28px; }
   * { box-sizing: border-box; }
   .panel {
-    position: fixed; z-index: 2147483000; top: 96px; right: 18px; width: min(540px, calc(100vw - 36px));
-    border: 1px solid #34495d; border-radius: 12px; overflow: hidden;
-    color: #e9f0f7; background: #111923; box-shadow: 0 14px 44px rgba(0,0,0,.45);
+    position:relative; width:100%; border:1px solid #2c3e50; border-radius:3px; overflow:hidden;
+    color:#e9f0f7; background:#111923;
     font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   }
-  .header { display:flex; align-items:center; justify-content:space-between; padding: 12px 14px; background:#182431; }
-  .title { font-size:14px; font-weight:700; letter-spacing:.01em; }
+  .header { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; background:#1b2a38; border-bottom:1px solid #2c3e50; }
+  .title { font-size:16px; font-weight:600; letter-spacing:.01em; }
   .subtitle { color:#94a8bb; font-size:11px; margin-top:2px; }
   .collapse { border:0; border-radius:6px; color:#a9b9c8; background:transparent; cursor:pointer; padding:4px 8px; }
   .collapse:hover { background:#253547; color:white; }
-  .body { padding: 12px 14px 14px; }
+  .body { padding:16px 18px 18px; }
   .collapsed .body { display:none; }
   .qualities { display:flex; gap:6px; margin-bottom:10px; }
   .quality { border:1px solid #40556b; border-radius:7px; padding:6px 11px; background:#172330; color:#b9c7d4; cursor:pointer; }
@@ -66,7 +65,7 @@ const STYLES = `
   .meta { display:flex; justify-content:space-between; gap:12px; margin-top:9px; color:#8195a7; font-size:11px; }
   .warning { color:#e5b76d; }
   .missing { margin-top:8px; color:#b8a085; font-size:11px; }
-  @media (max-width: 700px) { .panel { top:auto; bottom:12px; right:12px; width:calc(100vw - 24px); } }
+  @media (max-width:700px) { :host { margin:16px 0 20px; } .body { padding:12px; } }
 `;
 
 export class GraphPanel {
@@ -74,11 +73,16 @@ export class GraphPanel {
   private readonly root: ShadowRoot;
   private collapsed = false;
 
-  constructor() {
+  constructor(before: Element | null = null) {
     this.host = document.createElement("div");
     this.host.id = "cslytics-float-curves";
     this.root = this.host.attachShadow({ mode: "open" });
-    document.body.append(this.host);
+    this.mountBefore(before);
+  }
+
+  mountBefore(anchor: Element | null): void {
+    if (anchor?.parentNode) anchor.before(this.host);
+    else if (!this.host.isConnected) document.body.append(this.host);
   }
 
   remove(): void {
@@ -229,7 +233,7 @@ export class GraphPanel {
     yMin = Math.max(0, yMin - yPadding);
     yMax += yPadding;
 
-    const width = 720;
+    const width = 1000;
     const height = 350;
     const margin = { left: 64, right: 18, top: 34, bottom: 42 };
     const plotWidth = width - margin.left - margin.right;
