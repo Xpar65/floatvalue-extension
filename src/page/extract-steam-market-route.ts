@@ -7,6 +7,7 @@ import type { SteamMarketRouteSnapshot } from "../domain/types";
 export function extractSteamMarketRouteSnapshot(): SteamMarketRouteSnapshot | null {
   const pageGlobal = globalThis as typeof globalThis & {
     SSR?: { loaderData?: unknown[] };
+    g_rgWalletInfo?: unknown;
     __cslyticsRouteHookInstalled?: boolean;
   };
   if (!pageGlobal.__cslyticsRouteHookInstalled) {
@@ -22,8 +23,50 @@ export function extractSteamMarketRouteSnapshot(): SteamMarketRouteSnapshot | nu
       } as History[typeof method];
     }
   }
+  // Same global the inventory extractor reads; it belongs to Steam's shared page chrome rather
+  // than to the route data, so it is captured independently and may legitimately be absent.
+  const walletInfo = pageGlobal.g_rgWalletInfo;
+  const rawWalletCurrency =
+    typeof walletInfo === "object" && walletInfo !== null
+      ? (walletInfo as Record<string, unknown>).wallet_currency
+      : undefined;
+  const chromeCurrencyId =
+    typeof rawWalletCurrency === "number" && Number.isInteger(rawWalletCurrency)
+      ? rawWalletCurrency
+      : null;
+
   const loaderData = pageGlobal.SSR?.loaderData;
   if (!Array.isArray(loaderData)) return null;
+
+  /**
+   * The 2026 market pages ship no `g_rgWalletInfo` at all — the only statement of the currency
+   * every price on the page is denominated in is the market shell's own `filterConfig.currency`,
+   * which sits in a *different* loader entry from the listing route data. It is also the more
+   * accurate number of the two: it is what Steam formatted the visible prices with.
+   */
+  let filterCurrencyId: number | null = null;
+  for (const candidate of loaderData) {
+    let parsed: unknown = candidate;
+    if (typeof candidate === "string") {
+      if (!candidate.includes('"filterConfig"')) continue;
+      try {
+        parsed = JSON.parse(candidate) as unknown;
+      } catch {
+        continue;
+      }
+    }
+    if (typeof parsed !== "object" || parsed === null) continue;
+    const filterConfig = (parsed as Record<string, unknown>).filterConfig;
+    if (typeof filterConfig !== "object" || filterConfig === null) continue;
+    const currency = (filterConfig as Record<string, unknown>).currency;
+    if (typeof currency !== "object" || currency === null) continue;
+    const raw = (currency as Record<string, unknown>).eCurrency;
+    if (typeof raw === "number" && Number.isInteger(raw) && raw > 0) {
+      filterCurrencyId = raw;
+      break;
+    }
+  }
+  const walletCurrencyId = filterCurrencyId ?? chromeCurrencyId;
 
   for (const candidate of loaderData) {
     let parsed: unknown = candidate;
@@ -91,7 +134,8 @@ export function extractSteamMarketRouteSnapshot(): SteamMarketRouteSnapshot | nu
         strItemName: (query as Record<string, unknown>).strItemName as string
       },
       relevantAssetProperties,
-      bCommodity: record.bCommodity
+      bCommodity: record.bCommodity,
+      walletCurrencyId
     };
   }
   return null;

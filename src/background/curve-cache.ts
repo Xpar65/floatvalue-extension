@@ -6,15 +6,27 @@ const SUCCESS_MAX_LOCAL_TTL = 24 * HOUR;
 const SUCCESS_MIN_RECHECK = HOUR;
 const MISSING_TTL = 6 * HOUR;
 
+/**
+ * Bumped whenever `ValidatedCurve` gains or changes a field. Entries written by an older schema
+ * fail validation, get refetched, and overwrite the same key — so no stale-shaped curve reaches
+ * the UI and no orphaned keys accumulate (there is no eviction pass, and `StorageAdapter` cannot
+ * enumerate keys, so a key-prefix bump would leak the old entries forever).
+ *
+ * 2 — added `lowestAsk`, `highestBid`, and `listings`.
+ */
+export const CURVE_CACHE_SCHEMA = 2;
+
 export type CurveCacheEntry =
   | {
       kind: "success";
+      schema: number;
       fetchedAt: number;
       curve: ValidatedCurve;
       etag?: string;
     }
   | {
       kind: "missing";
+      schema: number;
       fetchedAt: number;
     };
 
@@ -37,6 +49,7 @@ export class ChromeStorageAdapter implements StorageAdapter {
 function isValidCacheEntry(value: unknown): value is CurveCacheEntry {
   if (typeof value !== "object" || value === null) return false;
   const record = value as Record<string, unknown>;
+  if (record.schema !== CURVE_CACHE_SCHEMA) return false;
   if (record.kind === "missing") return typeof record.fetchedAt === "number";
   return (
     record.kind === "success" &&

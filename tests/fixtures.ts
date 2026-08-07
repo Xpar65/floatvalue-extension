@@ -38,16 +38,23 @@ export const REDLINE_SNAPSHOT: SteamMarketRouteSnapshot = {
   buckets: REDLINE_BUCKETS,
   listingQuery: { appid: 730, strItemName: "G1807209A023004" },
   relevantAssetProperties: { "1": true, "2": true, "5": true, "6": true },
-  bCommodity: false
+  bCommodity: false,
+  // Read from Steam's `g_rgWalletInfo`, never from the route loader — null when absent.
+  walletCurrencyId: null
 };
 
+/**
+ * The optional series default to null — the shape every document the live CDN currently serves
+ * parses to — so tests that predate the ask/bid/listings contract keep asserting the same thing.
+ */
 export function makeCurve(
   marketHashName: string,
   vertices: Array<readonly [number, number]> = [
     [0.15, 42.15],
     [0.2, 38.44],
     [0.37, 35]
-  ]
+  ],
+  extras: Partial<Pick<ValidatedCurve, "lowestAsk" | "highestBid" | "listings">> = {}
 ): ValidatedCurve {
   return {
     venue: "steam",
@@ -55,7 +62,11 @@ export function makeCurve(
     currency: "USD",
     floatRange: { min: 0.1, max: 0.7 },
     computedAt: "2026-08-05T02:08:31Z",
-    fairPrice: { vertices, asOf: "2026-08-05T02:00:00Z" }
+    fairPrice: { vertices, asOf: "2026-08-05T02:00:00Z" },
+    lowestAsk: null,
+    highestBid: null,
+    listings: null,
+    ...extras
   };
 }
 

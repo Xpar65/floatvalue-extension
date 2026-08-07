@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { CurveCache, type StorageAdapter } from "../src/background/curve-cache";
+import { CurveCache, CURVE_CACHE_SCHEMA, type StorageAdapter } from "../src/background/curve-cache";
 import { SteamCurveClient } from "../src/background/curve-client";
 import { nameHash } from "../src/domain/name-hash";
 import { makeCurve } from "./fixtures";
@@ -94,6 +94,7 @@ describe("SteamCurveClient", () => {
     const hash = await nameHash(NAME);
     await cache.set(hash, {
       kind: "success",
+      schema: CURVE_CACHE_SCHEMA,
       fetchedAt: Date.parse("2026-08-04T00:00:00Z"),
       curve: makeCurve(NAME)
     });
@@ -125,5 +126,34 @@ describe("SteamCurveClient", () => {
       () => Date.parse("2026-08-05T03:00:00Z")
     );
     await expect(client.fetchOne(NAME)).resolves.toMatchObject({ status: "success", stale: false });
+  });
+
+  it("carries the contract's ask, bid, and listing fields through to the outcome", async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          ...responseBody,
+          lowest_ask: { vertices: [[0.15, 43.2]], as_of: "2026-08-05T22:10:00Z" },
+          highest_bid: { segments: [[[0.15, 39.5], [0.2, 39]]], as_of: "2026-08-05T22:05:00Z" },
+          listings: {
+            as_of: "2026-08-05T22:15:00Z",
+            entries: [{ id: "a", float: 0.16345678, price: 43.2 }]
+          }
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    );
+    const client = new SteamCurveClient(
+      new CurveCache(new MemoryStorage()),
+      fetchMock as unknown as typeof fetch,
+      undefined,
+      () => Date.parse("2026-08-05T03:00:00Z")
+    );
+    const outcome = await client.fetchOne(NAME);
+    expect(outcome).toMatchObject({ status: "success" });
+    if (outcome.status !== "success") throw new Error("expected success");
+    expect(outcome.curve.lowestAsk?.vertices).toEqual([[0.15, 43.2]]);
+    expect(outcome.curve.highestBid?.segments).toHaveLength(1);
+    expect(outcome.curve.listings?.entries).toEqual([{ id: "a", float: 0.16345678, price: 43.2 }]);
   });
 });

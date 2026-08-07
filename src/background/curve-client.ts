@@ -4,6 +4,7 @@ import type { CurveFetchOutcome } from "../domain/types";
 import {
   cacheEntryIsFresh,
   CurveCache,
+  CURVE_CACHE_SCHEMA,
   type CurveCacheEntry
 } from "./curve-cache";
 
@@ -86,7 +87,11 @@ export class SteamCurveClient {
           return this.outcomeFromCache(marketHashName, refreshed, false);
         }
         if (response.status === 404) {
-          const missing: CurveCacheEntry = { kind: "missing", fetchedAt: now };
+          const missing: CurveCacheEntry = {
+            kind: "missing",
+            schema: CURVE_CACHE_SCHEMA,
+            fetchedAt: now
+          };
           await this.persistBestEffort(hash, missing);
           return { status: "missing", marketHashName };
         }
@@ -95,8 +100,8 @@ export class SteamCurveClient {
         const curve = validateCurveResponse(await response.json(), marketHashName);
         const etag = response.headers.get("ETag");
         const success: CurveCacheEntry = etag
-          ? { kind: "success", fetchedAt: now, curve, etag }
-          : { kind: "success", fetchedAt: now, curve };
+          ? { kind: "success", schema: CURVE_CACHE_SCHEMA, fetchedAt: now, curve, etag }
+          : { kind: "success", schema: CURVE_CACHE_SCHEMA, fetchedAt: now, curve };
         await this.persistBestEffort(hash, success);
         return { status: "success", marketHashName, curve, stale: false };
       } catch (error) {

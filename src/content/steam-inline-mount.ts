@@ -36,3 +36,36 @@ export function findSteamPriceHistorySection(
   }
   return null;
 }
+
+/**
+ * Resolves once Steam has rendered the price-history section, or with null if it never does.
+ *
+ * The content script runs at `document_idle`, which on this React route is usually *before* the
+ * section exists. Mounting against a null anchor strands the panel at the end of `<body>`, and
+ * `RouteChangeObserver` only re-runs the load when `location.href` changes — so the panel stayed
+ * stranded until the user happened to switch quality tab, which does change the URL. Wait for the
+ * anchor instead of racing it.
+ */
+export function waitForSteamPriceHistorySection(
+  timeoutMs = 15_000,
+  root: ParentNode = document
+): Promise<HTMLElement | null> {
+  const existing = findSteamPriceHistorySection(root);
+  if (existing) return Promise.resolve(existing);
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (value: HTMLElement | null): void => {
+      if (settled) return;
+      settled = true;
+      observer.disconnect();
+      clearTimeout(timer);
+      resolve(value);
+    };
+    const observer = new MutationObserver(() => {
+      const found = findSteamPriceHistorySection(root);
+      if (found) finish(found);
+    });
+    const timer = setTimeout(() => finish(null), timeoutMs);
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+  });
+}

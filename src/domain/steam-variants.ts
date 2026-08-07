@@ -23,6 +23,22 @@ const EXTERIOR_MAP: Record<
   WearCategory4: { wear: "battle-scarred", wearOrder: 4 }
 };
 
+export function marketVariantFromSteamTags(
+  marketHashName: string,
+  qualityTag: string,
+  exteriorTag: string
+): MarketVariant | null {
+  const quality = QUALITY_MAP[qualityTag];
+  const exterior = EXTERIOR_MAP[exteriorTag];
+  if (!quality || !exterior || marketHashName.length === 0) return null;
+  return {
+    quality,
+    wear: exterior.wear,
+    wearOrder: exterior.wearOrder,
+    marketHashName
+  };
+}
+
 function filterValue(filters: unknown, category: string): string | null {
   if (!Array.isArray(filters)) return null;
   for (const filter of filters) {
@@ -43,16 +59,8 @@ export function mapSteamBucket(bucket: SteamBucket): MarketVariant | null {
   const qualityTag = filterValue(bucket.filters, "Quality");
   const exteriorTag = filterValue(bucket.filters, "Exterior");
   if (!qualityTag || !exteriorTag) return null;
-  const quality = QUALITY_MAP[qualityTag];
-  const exterior = EXTERIOR_MAP[exteriorTag];
-  if (!quality || !exterior) return null;
-
-  const variant: MarketVariant = {
-    quality,
-    wear: exterior.wear,
-    wearOrder: exterior.wearOrder,
-    marketHashName: bucket.bucket_id
-  };
+  const variant = marketVariantFromSteamTags(bucket.bucket_id, qualityTag, exteriorTag);
+  if (!variant) return null;
   if (typeof bucket.classid === "string") variant.classid = bucket.classid;
   if (typeof bucket.min_price === "string" && /^\d+$/.test(bucket.min_price)) {
     variant.steamMinPriceCents = Number(bucket.min_price);

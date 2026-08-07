@@ -36,7 +36,9 @@ export const WEAR_RANGES: readonly WearRange[] = [
     shortLabel: "FT",
     min: 0.15,
     max: 0.38,
-    color: "#dcb259"
+    // Deliberately not amber: #dcb259 was close enough to --cs-accent (#FFB900) that an FT curve
+    // read as selected UI rather than data. See the style guide's colour-conflict section.
+    color: "#c08a4a"
   },
   {
     wear: "well-worn",
@@ -57,6 +59,15 @@ export const WEAR_RANGES: readonly WearRange[] = [
     color: "#84453b"
   }
 ];
+
+/**
+ * The internal float boundaries between wear tiers (0.07, 0.15, 0.38, 0.45). Not 0 or 1: those are
+ * the ends of the axis, not divisions within it. Each boundary carries the colour of the tier it
+ * opens, so a divider reads as the start of that band rather than as another grid line.
+ */
+export const WEAR_BOUNDARIES: readonly { at: number; color: string }[] = WEAR_RANGES.slice(1).map(
+  (range) => ({ at: range.min, color: range.color })
+);
 
 const BY_WEAR = new Map(WEAR_RANGES.map((range) => [range.wear, range]));
 
