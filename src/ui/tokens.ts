@@ -47,9 +47,11 @@ export const CSLYTICS_TOKENS = `
     --cs-negative:        #FF6467;
 
     /* Data marks — the two points plotted on a single-variant graph. Distinct hues by request,
-       reinforced by distinct shapes (circle vs diamond). Not chrome; never use these on a button. */
+       reinforced by distinct shapes (circle vs diamond). Not chrome; never use these on a button.
+       --cs-mark-listing is a deliberately distinct orange (Tailwind v4 orange-600), not
+       --cs-accent's amber — reads as "cslytics orange" without doubling as clickable chrome. */
     --cs-mark-estimate:   #00D492;
-    --cs-mark-listing:    #5EA8FF;
+    --cs-mark-listing:    #F54900;
 
     /* Chart internals — minor grid is the unlabelled decade subdivision on a log axis, so it
        must read as structure behind the data rather than as another line on it. */
