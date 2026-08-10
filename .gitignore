@@ -7,6 +7,8 @@ floatvalue-extension-documentation/
 AGENTS.md
 CLAUDE.md
 
+floatvalue.zip
+
 # Local assistant config — references absolute paths to sibling repos on disk.
 .claude/
 .cursor/

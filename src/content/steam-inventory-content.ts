@@ -50,20 +50,60 @@ let selectionWaitTimer: ReturnType<typeof setTimeout> | null = null;
 
 const SELECTION_DATA_TIMEOUT_MS = 5_000;
 
+/** Steam's own floor for a modal's distance from the top of the viewport (`CModal.AdjustSizing`). */
+const DIALOG_VIEWPORT_MARGIN_PX = 12;
+/** Extra room below Steam's confirm button so it never sits flush against the scroll boundary. */
+const DIALOG_BOTTOM_BREATHING_ROOM_PX = 28;
+
 /**
- * Our panel adds height to a dialog Steam sized for its own content, which can push the agreement
- * checkbox and the confirm button past the bottom of the viewport. Cap the dialog and let it
- * scroll, remembering the author's inline values so closing the dialog leaves no trace.
+ * `.newmodal_content` is already Steam's scroll container: `CModal.AdjustSizing` caps it at
+ * `viewportHeight - 120` and `shared_global.css` gives it `overflow: auto`, and the agreement
+ * checkbox and confirm button live inside it. So the panel must not introduce a scroll container
+ * of its own — that is the second scrollbar.
+ *
+ * What actually pushes the confirm button off-screen is the dialog's *position*. `AdjustSizing`
+ * runs once inside `CModal.Show()`, before the panel mounts, and centres the dialog by writing a
+ * fixed `top` derived from the height it had then. Growing the content afterwards extends the
+ * dialog downwards from that stale `top`, past the bottom of a viewport it can no longer scroll
+ * into. Re-run Steam's own centring formula whenever our content resizes it, and pad the scroll
+ * container so the button is not flush with its bottom edge. The author's inline values are
+ * remembered so closing the dialog leaves no trace.
  */
 function keepDialogReachable(dialog: HTMLElement): void {
   restoreDialogStyle?.();
-  const previousMaxHeight = dialog.style.maxHeight;
-  const previousOverflowY = dialog.style.overflowY;
-  dialog.style.maxHeight = "90vh";
-  dialog.style.overflowY = "auto";
+
+  const scroller = dialog.querySelector<HTMLElement>(".newmodal_content");
+  const previousTop = dialog.style.top;
+  const previousPaddingBottom = scroller?.style.paddingBottom ?? "";
+
+  if (scroller) {
+    const padding = Number.parseFloat(getComputedStyle(scroller).paddingBottom);
+    const base = Number.isFinite(padding) ? padding : 0;
+    scroller.style.paddingBottom = `${base + DIALOG_BOTTOM_BREATHING_ROOM_PX}px`;
+  }
+
+  const recentre = (): void => {
+    // Touch-friendly mode drops the cap and positions the dialog absolutely, so the page itself
+    // scrolls to the button; a viewport-relative `top` would be wrong there.
+    if (getComputedStyle(dialog).position !== "fixed") return;
+    const height = dialog.offsetHeight;
+    if (height <= 0) return;
+    const top = Math.max(
+      DIALOG_VIEWPORT_MARGIN_PX,
+      Math.floor((window.innerHeight - height) / 2)
+    );
+    dialog.style.top = `${top}px`;
+  };
+
+  const observer =
+    typeof ResizeObserver === "function" ? new ResizeObserver(() => recentre()) : null;
+  observer?.observe(dialog);
+  recentre();
+
   restoreDialogStyle = () => {
-    dialog.style.maxHeight = previousMaxHeight;
-    dialog.style.overflowY = previousOverflowY;
+    observer?.disconnect();
+    dialog.style.top = previousTop;
+    if (scroller) scroller.style.paddingBottom = previousPaddingBottom;
   };
 }
 

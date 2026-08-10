@@ -1,4 +1,5 @@
 import { build, context } from "esbuild";
+import sharp from "sharp";
 import { cp, mkdir, rm } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -7,9 +8,26 @@ const watch = process.argv.includes("--watch");
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const outdir = resolve(projectRoot, "dist");
 
+const ICON_SIZES = [16, 32, 48, 128];
+
+async function buildIcons() {
+  const iconsDir = resolve(outdir, "icons");
+  await mkdir(iconsDir, { recursive: true });
+  const svgPath = resolve(projectRoot, "src/assets/icon.svg");
+  await Promise.all(
+    ICON_SIZES.map((size) =>
+      sharp(svgPath, { density: 384 })
+        .resize(size, size)
+        .png()
+        .toFile(resolve(iconsDir, `icon-${size}.png`))
+    )
+  );
+}
+
 await rm(outdir, { recursive: true, force: true });
 await mkdir(outdir, { recursive: true });
 await cp(resolve(projectRoot, "manifest.json"), resolve(outdir, "manifest.json"));
+await buildIcons();
 
 const sharedOptions = {
   bundle: true,
