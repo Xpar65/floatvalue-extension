@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "license": "MIT",
   "description": "Cslytics fair-price estimates and float curves for Steam's 2026 market and inventory pages.",
   "scripts": {
     "build": "node scripts/build.mjs",

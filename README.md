@@ -50,3 +50,7 @@ Useful commands:
 To try it locally, run `npm run build`, open `chrome://extensions`, enable Developer mode, choose
 **Load unpacked**, and select this repository's `dist` directory.
 
+## License
+
+[MIT](LICENSE)
+
